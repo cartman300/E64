@@ -40,7 +40,11 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CPU.cs" />
+    <Compile Include="CPUException.cs" />
+    <Compile Include="Indexable.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Registers.cs" />
+    <Compile Include="Utils.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

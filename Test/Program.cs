@@ -10,7 +10,16 @@ namespace Test {
 		static void Main(string[] args) {
 			Console.Title = "Test";
 
-			CPU Elisa = new CPU();
+			byte[] Memory = new byte[4096];
+
+			CPU Elisa = new CPU(new Indexable<ulong, byte>((Addr) => {
+				return Memory[Addr];
+			}, (Addr, Val) => {
+				Memory[Addr] = Val;
+			}));
+
+			while (true)
+				Elisa.Step();
 
 			Console.WriteLine("Done!");
 			Console.ReadLine();
