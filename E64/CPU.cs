@@ -7,18 +7,19 @@ using System.Threading;
 using System.Runtime.InteropServices;
 
 namespace E64 {
+	// _REG _I8 _I16 _I32 _I64
 	public enum Instruction : byte {
 		NOP,
 		HALT,
 		LOCK,
 		UNLOCK,
-		INT_CONST,
+		INT_I8,
 		INT_REG,
-		JUMP_CONST,
+		JUMP_I64,
 		JUMP_REG,
-		MOVE_CONST,
-		MOVE_REG,
-		PRINT_GP,
+		MOVE_REG_I64,
+		MOVE_REG_REG,
+		PRINT_REG,
 	}
 
 	public unsafe class CPU {
@@ -76,25 +77,25 @@ namespace E64 {
 				case Instruction.UNLOCK:
 					Monitor.Exit(Memory);
 					break;
-				case Instruction.INT_CONST:
+				case Instruction.INT_I8:
 					Interrupt(FetchInstrInt8());
 					break;
 				case Instruction.INT_REG:
 					Interrupt((byte)(Regs.GP[FetchInstrInt8()] & 0xFF));
 					break;
-				case Instruction.JUMP_CONST:
+				case Instruction.JUMP_I64:
 					Regs.IP = (UInt64)FetchInstrInt64();
 					break;
 				case Instruction.JUMP_REG:
 					Regs.IP = (UInt64)Regs.GP[FetchInstrInt8()];
 					break;
-				case Instruction.MOVE_CONST:
+				case Instruction.MOVE_REG_I64:
 					Regs.GP[FetchInstrInt8()] = FetchInstrInt64();
 					break;
-				case Instruction.MOVE_REG:
+				case Instruction.MOVE_REG_REG:
 					Regs.GP[FetchInstrInt8()] = Regs.GP[FetchInstrInt8()];
 					break;
-				case Instruction.PRINT_GP: {
+				case Instruction.PRINT_REG: {
 						byte Num = FetchInstrInt8();
 						Console.WriteLine("GP[{0}] = {1}", Num, Regs.GP[Num]);
 					}

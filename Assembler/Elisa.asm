@@ -1,0 +1,17 @@
+include "E64_InstrSet.asm"
+
+macro main {
+	MOVE_REG_I64 5, 42
+	MOVE_REG_REG 4, 5
+	MOVE_REG_REG 3, 4
+	MOVE_REG_REG 2, 3
+	MOVE_REG_REG 1, 2
+	MOVE_REG_REG 0, 1
+	INT_REG 0
+	INT_REG 1
+	INT_REG 2
+	INT_REG 3
+	INT_REG 4
+	INT_REG 5
+	HALT
+}

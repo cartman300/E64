@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.IO;
 using E64;
 
 namespace Test {
@@ -10,22 +11,8 @@ namespace Test {
 		static void Main(string[] args) {
 			Console.Title = "Test";
 
-			List<byte> Prog = new List<byte>();
-			Prog.Add((byte)Instruction.MOVE_CONST);
-			Prog.Add(6);
-			Prog.AddRange(BitConverter.GetBytes((long)42069));
-			Prog.Add((byte)Instruction.MOVE_REG);
-			Prog.Add(0);
-			Prog.Add(6);
-			Prog.Add((byte)Instruction.PRINT_GP);
-			Prog.Add(0);
-			Prog.Add((byte)Instruction.INT_CONST);
-			Prog.Add(42);
-			Prog.Add((byte)Instruction.PRINT_GP);
-			Prog.Add(0);
-			Prog.Add((byte)Instruction.HALT);
+			byte[] Memory = File.ReadAllBytes("Elisa.bin");
 
-			byte[] Memory = Prog.ToArray();
 			Indexable<ulong, byte> Mem = new Indexable<ulong, byte>((K) => Memory[K], (K, V) => Memory[K] = V);
 			CPU Elisa = new CPU(Mem);
 			Elisa.OnInterrupt += (Int) => {
