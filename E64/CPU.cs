@@ -11,29 +11,35 @@ namespace E64 {
 	public enum Instruction : byte {
 		NOP,
 		HALT,
-		LOCK,
-		UNLOCK,
 		INT_I8,
-		INT_REG,
 		JUMP_I64,
 		JUMP_REG,
 		MOVE_REG_I64,
 		MOVE_REG_REG,
-		PRINT_REG,
+		PUSH_STR,
+		PUSH_I64,
+		PUSH_I32,
+		PINVOKE,
 	}
 
 	public unsafe class CPU {
 		public bool Halted;
-		Indexable<UInt64, byte> Memory;
+		//Indexable<UInt64, byte> Memory;
+		byte[] Memory;
 
 		public event Action<byte> OnInterrupt;
 		public Registers Regs;
+		public Stack<object> Stack;
 
-		public CPU(Indexable<UInt64, byte> Mem) {
+		public CPU(byte[] Mem) {
 			Halted = false;
 			Regs = new Registers();
+			Stack = new Stack<object>();
 			Memory = Mem;
 		}
+
+		/*public CPU(byte[] Memory) : this(new Indexable<ulong, byte>((K) => Memory[K], (K, V) => Memory[K] = V)) {
+		}*/
 
 		public byte FetchInstrInt8() {
 			return Memory[Regs.IP++];
@@ -54,6 +60,16 @@ namespace E64 {
 			return BitConverter.ToInt64(IntBytes, 0);
 		}
 
+		public string FetchInstrString() {
+			ulong Addr = (ulong)FetchInstrInt64();
+			int Len = BitConverter.ToInt32(new[] { Memory[Addr], Memory[Addr + 1], Memory[Addr + 2], Memory[Addr + 3] }, 0);
+
+			byte[] Bytes = new byte[Len];
+			for (int i = 0; i < Len; i++)
+				Bytes[i] = Memory[4 + (ulong)i + Addr];
+			return Encoding.UTF8.GetString(Bytes);
+		}
+
 		public void Interrupt(byte Num) {
 			if (OnInterrupt != null)
 				OnInterrupt(Num);
@@ -71,17 +87,8 @@ namespace E64 {
 				case Instruction.HALT:
 					Halted = true;
 					break;
-				case Instruction.LOCK:
-					Monitor.Enter(Memory);
-					break;
-				case Instruction.UNLOCK:
-					Monitor.Exit(Memory);
-					break;
 				case Instruction.INT_I8:
 					Interrupt(FetchInstrInt8());
-					break;
-				case Instruction.INT_REG:
-					Interrupt((byte)(Regs.GP[FetchInstrInt8()] & 0xFF));
 					break;
 				case Instruction.JUMP_I64:
 					Regs.IP = (UInt64)FetchInstrInt64();
@@ -95,14 +102,60 @@ namespace E64 {
 				case Instruction.MOVE_REG_REG:
 					Regs.GP[FetchInstrInt8()] = Regs.GP[FetchInstrInt8()];
 					break;
-				case Instruction.PRINT_REG: {
-						byte Num = FetchInstrInt8();
-						Console.WriteLine("GP[{0}] = {1}", Num, Regs.GP[Num]);
-					}
+				case Instruction.PUSH_STR:
+					Stack.Push(FetchInstrString());
 					break;
+				case Instruction.PUSH_I64:
+					Stack.Push(FetchInstrInt64());
+					break;
+				case Instruction.PUSH_I32:
+					Stack.Push(FetchInstrInt32());
+					break;
+				case Instruction.PINVOKE: {
+						string LibName = FetchInstrString();
+						string FuncName = FetchInstrString();
+						CharSet CSet = (CharSet)FetchInstrInt8();
+						CallingConvention CConv = (CallingConvention)FetchInstrInt8();
+
+						Type ReturnType = Type.GetType(FetchInstrString());
+						int ParamTypeCount = FetchInstrInt8();
+		
+						Type[] ParamTypes = null;
+						if (ParamTypeCount == 255)
+							ParamTypes = new Type[Stack.Count];
+						else
+							ParamTypes = new Type[ParamTypeCount];
+
+						if (ParamTypeCount != 255)
+							for (int i = 0; i < ParamTypes.Length; i++)
+								ParamTypes[i] = Type.GetType(FetchInstrString());
+						else {
+							object[] StackVals = Stack.Reverse().ToArray();
+							for (int i = 0; i < ParamTypes.Length; i++)
+								ParamTypes[i] = StackVals[i].GetType();
+						}
+
+						Console.WriteLine("[DllImport(\"{0}\", CharSet = {1}, CallingConvention = {2})]", LibName, CSet, CConv);
+						Console.WriteLine("{0} {1}({2})", ReturnType, FuncName, string.Join(", ", ParamTypes.Select((_) => _.ToString())));
+
+						List<object> Args = new List<object>();
+						for (int i = ParamTypes.Length - 1; i >= 0; i--)
+							Args.Add(ChangeType(Stack.Pop(), ParamTypes[i]));
+						Args.Reverse();
+
+						Console.WriteLine("{0}({1})", FuncName, string.Join(", ", Args));
+						break;
+					}
+
 				default:
 					throw new Exception("Invalid instruction " + I);
 			}
+		}
+
+		public object ChangeType(object O, Type T) {
+			if (O is Int64 && T == typeof(IntPtr))
+				return new IntPtr((Int64)O);
+			return Convert.ChangeType(O, T);
 		}
 	}
 }
