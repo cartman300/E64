@@ -7,6 +7,57 @@ using System.Threading.Tasks;
 
 namespace E64 {
 	public class Assembler {
+		static object ParseType(string T) {
+			if (T.StartsWith("\"") && T.EndsWith("\""))
+				return T.Substring(1, T.Length - 2);
+
+			T = T.ToLower();
+			if (T.EndsWith("f"))
+				return float.Parse(T.Substring(0, T.Length - 1));
+			if (T.EndsWith("d"))
+				return double.Parse(T.Substring(0, T.Length - 1));
+			if (T.EndsWith("u"))
+				return uint.Parse(T.Substring(0, T.Length - 1));
+			if (T.EndsWith("i"))
+				return int.Parse(T.Substring(0, T.Length - 1));
+			if (T.EndsWith("l"))
+				return long.Parse(T.Substring(0, T.Length - 1));
+			if (T.EndsWith("ul"))
+				return ulong.Parse(T.Substring(0, T.Length - 2));
+			if (T.EndsWith("b"))
+				return byte.Parse(T.Substring(0, T.Length - 1));
+
+
+			throw new Exception("Could not parse '" + T + "'");
+		}
+
+		public static byte[] Assemble(string Src) {
+			Assembler Asm = new Assembler();
+			string[] Tokens = SimpleTokenizer.Tokenize(Src, ';', new char[] { '&', ',', ';' });
+
+			for (int i = 0; i < Tokens.Length; i++) {
+				string T = Tokens[i];
+				if (T.Length == 0 || T == "," || T == ";")
+					continue;
+
+				if (T.EndsWith(":")) {
+					Asm.Label(T.Substring(0, T.Length - 1));
+				} else if (T == "&") {
+					Asm.AddressOf(Tokens[++i]);
+				} else if (T == "ref") {
+					Asm.Data(ParseType(Tokens[++i]));
+				} else {
+					Instruction I;
+					if (Enum.TryParse(T, out I))
+						Asm.Instr(I);
+					else
+						Asm.Raw(ParseType(T));
+				}
+			}
+
+			return Asm.ToByteArray();
+		}
+
 		struct _Label {
 			public string Name;
 
@@ -64,7 +115,7 @@ namespace E64 {
 		public Assembler AddressOf(string Name) {
 			return Raw(new _AddressOf(Name));
 		}
-		
+
 		public Assembler Raw(object O) {
 			TextObjects.Add(O);
 			return this;
@@ -123,7 +174,7 @@ namespace E64 {
 			for (int i = 0; i < TextObjects.Count; i++)
 				if (TextObjects[i] is _Label && ((_Label)TextObjects[i]).Name == Name)
 					return GetAddressOf(i);
-			return 0;
+			throw new Exception("Symbol not found " + Name);
 		}
 
 		int GetAddressOf(int Idx) {

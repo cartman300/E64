@@ -1,0 +1,34 @@
+﻿SHDLR 0b, &PRINT						; Set handler for interrupt 0 to PRINT
+NONPRIV									; Exit privileged mode
+
+MOV_R_64		0b, 0l					; GP0 = 0
+LOOP:
+CMP_R_64		0b, 10l
+JGE_64 &END								; if (GP0 >= 10) goto END
+	CALL_64		&PRINT_HELLO			; PRINT_HELLO(GP0)
+ADD_R_64		0b, 1l					; GP0 += 1
+JMP_64			&LOOP					; goto LOOP
+END:
+PUSH_64			ref "Hello World! #"	; push pointer to string
+TOSTRING_STR							; convert to string because stack holds objects
+CALL_64			&PRINT
+HALT
+
+PRINT_HELLO:
+	PUSH_64			ref "Hello World! #"	; Push string pointer
+	TOSTRING_STR							; Convert to string
+	INT_8			0b						; Interrupt #0
+	PUSH_R			0b						; Push GP0
+	TOSTRING								; Convert to string
+	INT_8			0b						; Interrupt #0
+	PUSH_64			ref "\n"				; Push string ptr
+	TOSTRING_STR							; Convert to string
+	INT_8			0b						; Interrupt #0
+	RET
+
+PRINT:
+	POP_R		1b								; Pop return address into GP1
+	PUSH_64		ref "Test.Exports.Print, Test"	; Push string pointer
+	NCALL										; Native call function
+	PUSH_R		1b								; Push GP1 (return addresss)
+	RET
