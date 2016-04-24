@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Runtime.InteropServices;
+using System.IO;
 using System.Threading.Tasks;
 
 namespace E64 {
@@ -10,6 +11,9 @@ namespace E64 {
 		static object ParseType(string T) {
 			if (T.StartsWith("\"") && T.EndsWith("\""))
 				return T.Substring(1, T.Length - 2);
+
+			if (T.StartsWith("GP"))
+				return byte.Parse(T.Substring(2));
 
 			T = T.ToLower();
 			if (T.EndsWith("f"))
@@ -31,8 +35,28 @@ namespace E64 {
 			throw new Exception("Could not parse '" + T + "'");
 		}
 
-		public static byte[] Assemble(string Src) {
+		static string[] SplitLines(string Src) {
+			return Src.Split(new char[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+		}
+
+		public static byte[] Assemble(string Src, out Instruction[] UnusedInstructions) {
 			Assembler Asm = new Assembler();
+			List<Instruction> UI = new List<Instruction>();
+			UI.AddRange(Enum.GetNames(typeof(Instruction)).Select((N) => (Instruction)Enum.Parse(typeof(Instruction), N)));
+
+			string[] Lines = SplitLines(Src);
+			for (int i = 0; i < Lines.Length; i++) {
+				if (Lines[i].StartsWith("#include")) {
+					string Pth = Lines[i].Substring(Lines[i].IndexOf('\"') + 1).Trim();
+					Pth = Pth.Substring(0, Pth.Length - 1);
+
+					Lines[i] = File.ReadAllText(Pth);
+					Lines = SplitLines(string.Join("\n", Lines));
+					i--;
+				}
+			}
+			Src = string.Join("\n", Lines);
+
 			string[] Tokens = SimpleTokenizer.Tokenize(Src, ';', new char[] { '&', ',', ';' });
 
 			for (int i = 0; i < Tokens.Length; i++) {
@@ -48,13 +72,16 @@ namespace E64 {
 					Asm.Data(ParseType(Tokens[++i]));
 				} else {
 					Instruction I;
-					if (Enum.TryParse(T, out I))
+					if (Enum.TryParse(T, out I)) {
+						if (UI.Contains(I))
+							UI.Remove(I);
 						Asm.Instr(I);
-					else
+					} else
 						Asm.Raw(ParseType(T));
 				}
 			}
 
+			UnusedInstructions = UI.ToArray();
 			return Asm.ToByteArray();
 		}
 

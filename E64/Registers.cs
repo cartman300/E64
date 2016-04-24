@@ -12,6 +12,7 @@ namespace E64 {
 		public const int EQUL = 1;
 		public const int LSSR = 2;
 		public const int GRTR = 3;
+		public const int INTF = 4;
 
 		public bool Privileged
 		{
@@ -35,6 +36,12 @@ namespace E64 {
 		{
 			get { return CRFlags[GRTR]; }
 			set { CRFlags[GRTR] = value; }
+		}
+		
+		public bool InterruptsEnabled
+		{
+			get { return CRFlags[INTF]; }
+			set { CRFlags[INTF] = value; }
 		}
 
 		public long[] GP;   // General purpose

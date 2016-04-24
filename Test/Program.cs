@@ -21,11 +21,18 @@ namespace Test {
 		static void Main(string[] args) {
 			Console.Title = "Test";
 
-			byte[] ProgMem = Assembler.Assemble(File.ReadAllText("Test.e64"));
+			Instruction[] Unused;
+			byte[] ProgMem = Assembler.Assemble(File.ReadAllText("Test.e64"), out Unused);
 			Dump(ProgMem);
 
+			//Console.WriteLine("Unused:");
+			//Console.WriteLine(string.Join(", ", Unused));
+
 			CPU Elisa = new CPU(ProgMem);
-			//Elisa.Debug = Debugger.IsAttached;
+			Elisa.Ports.Add(0, (Data, IsRead) => {
+				Console.Write((char)Data);
+				return 0;
+			});
 
 			try {
 				while (!Elisa.Halted)

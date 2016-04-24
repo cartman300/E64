@@ -46,6 +46,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+    <None Include="STD.e64">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="Test.e64">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
